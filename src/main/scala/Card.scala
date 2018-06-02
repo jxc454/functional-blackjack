@@ -10,10 +10,11 @@ object BjCard {
   private val validPipNames = List("2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A")
   private val validGroups = List("h", "s", "d", "c")
 
-  def createShoe(decks: Int): List[BjCard] = {
-    validPipNames.foldLeft(Nil:List[BjCard])((l: List[BjCard], p: String) => l ++
+  def createShoe(decks: Int): Shoe[BjCard] = {
+    new Shoe(validPipNames.foldLeft(Nil:List[BjCard])((l: List[BjCard], p: String) => l ++
       validGroups.foldLeft(Nil:List[BjCard])((l2: List[BjCard], g: String) =>
         List.fill(decks)(new BjCard(p, g)) ++ l2))
+    )
   }
 }
 
@@ -28,11 +29,24 @@ class BjCard(val pipName: String, val group: String) extends Card {
     case x => x.toInt
   }
 
-  def to_string: String = this.pipName.concat(this.group)
+  def to_string(): String = this.pipName.concat(this.group)
 
   val pip: Int = getPipValue(pipName)
 }
 
 
+object Shoe {
 
+}
+
+
+class Shoe[Card](val cards: List[Card]) {
+  def deal(n: Int): Option[List[Card]] = {
+    if (cards.size >= n) {Some(this.cards.take(n))} else None
+  }
+
+  def shuffle(): Shoe[Card] = {
+    new Shoe[Card](scala.util.Random.shuffle(this.cards))
+  }
+}
 
