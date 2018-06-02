@@ -12,7 +12,8 @@ object BjCard {
 
   def createShoe(decks: Int): List[BjCard] = {
     validPipNames.foldLeft(Nil:List[BjCard])((l: List[BjCard], p: String) => l ++
-      validGroups.foldLeft(Nil:List[BjCard])((l2: List[BjCard], g: String) => new BjCard(p, g) :: l2))
+      validGroups.foldLeft(Nil:List[BjCard])((l2: List[BjCard], g: String) =>
+        List.fill(decks)(new BjCard(p, g)) ++ l2))
   }
 }
 
@@ -31,7 +32,6 @@ class BjCard(val pipName: String, val group: String) extends Card {
 
   val pip: Int = getPipValue(pipName)
 }
-
 
 
 
