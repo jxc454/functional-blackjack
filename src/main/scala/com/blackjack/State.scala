@@ -21,12 +21,12 @@ case class State[S, +A](run: S => (A, S)) {
 object State {
   def unit[S, A](a: A): State[S, A] = State(s => (a, s))
 
-  def sequence[S, A](l: List[State[S, A]]): State[S, List[A]] = {
-    l.foldRight(unit[S, List[A]](Nil: List[A]))((f, acc) => {
+  def sequence[S, A](l: Seq[State[S, A]]): State[S, Seq[A]] = {
+    l.foldRight(unit[S, Seq[A]](Nil: Seq[A]))((f, acc) => {
       State(s => {
         val (a, s2) = f.run(s)
         val (list2, s3) = acc.run(s2)
-        (a :: list2, s3)
+        (a +: list2, s3)
       })
     })
 
