@@ -46,7 +46,7 @@ trait Hand[Card] {
   def to_string(): String
 }
 
-case class BjHand(cards: Seq[BjCard], bet: Double) extends Hand[BjCard] {
+case class BjHand(cards: Seq[BjCard], bet: Double, surrendered: Boolean=false) extends Hand[BjCard] {
   def to_string(): String = cards.foldLeft("")((l, c) => l.concat(c.to_string()))
 
   def handValue(): Int = this.cards.foldLeft(0)(_ + _.pip)

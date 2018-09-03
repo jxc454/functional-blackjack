@@ -93,8 +93,8 @@ class BlackJackGame {
                 sys.exit()
             }
 
-            println(s"dealer card: ${game.dealer.hand.cards.head.to_string}")
-            println(s"your cards: ${newHand.cards.map(_.to_string).mkString("")} | value: ${newHand.handValue()}")
+            println(s"dealer card: ${game.dealer.hand.cards.head.to_string()}")
+            println(s"your cards: ${newHand.cards.map(_.to_string()).mkString("")} | value: ${newHand.handValue()}")
 
             play(
               game.copy(
@@ -122,8 +122,8 @@ class BlackJackGame {
                   sys.exit()
             }
 
-            println(s"dealer card: ${game.dealer.hand.cards.head.to_string}")
-            println(s"your cards: ${newHand.cards.map(_.to_string).mkString("")} | value: ${newHand.handValue()}")
+            println(s"dealer card: ${game.dealer.hand.cards.head.to_string()}")
+            println(s"your cards: ${newHand.cards.map(_.to_string()).mkString("")} | value: ${newHand.handValue()}")
 
             play(
               game.copy(
@@ -134,6 +134,17 @@ class BlackJackGame {
                   hand=newHand
                 ),
                 state="dealerAction"
+              )
+            )
+          case "r" =>
+            play(
+              game.copy(
+                player=game.player.copy(
+                  hand=game.player.hand.copy(
+                    surrendered=true
+                  )
+                ),
+                state="settleUp"
               )
             )
         }
@@ -174,7 +185,12 @@ class BlackJackGame {
         val playerHandValue: Int = game.player.hand.handValue()
         val dealerHandValue: Int = game.dealer.hand.handValue()
 
-        val newBalance: Double = if (
+        val newBalance: Double = if (game.player.hand.surrendered) {
+          println(s"dealer cards: ${game.dealer.hand.to_string()}")
+          println("you surrendered!")
+
+          game.player.balance - game.player.hand.bet / 2
+        } else if (
           (playerHandValue > dealerHandValue && playerHandValue <= 21) || dealerHandValue > 21) {
           println(s"dealer cards: ${game.dealer.hand.to_string()}")
           println("you win!")
@@ -222,7 +238,7 @@ object BlackJackGame {
     try {
       StdIn.readDouble()
     } catch {
-      case e: Exception =>
+      case _: Exception =>
         println("couldn't accept that bet, try a different bet.")
         userBet()
     }
