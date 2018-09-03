@@ -69,8 +69,6 @@ class BlackJackGame {
 
         println(s"your cards: ${hands(1).cards.map(_.to_string).mkString("")} | value: ${hands(1).handValue()}")
 
-        println(s"cards remaining: ${newShoe.size}")
-
         play(
           game.copy(
             dealer=game.dealer.copy(
@@ -113,6 +111,34 @@ class BlackJackGame {
           case "s" =>
             play(
               game.copy(
+                state="dealerAction"
+              )
+            )
+          case "d" =>
+            val (newCard: Option[Seq[BjCard]], newShoe: Shoe) = game.dealer.shoe.deal(1).run(game.dealer.shoe)
+
+            val currentCards: Seq[BjCard] = game.player.hand.cards
+
+            val newHand: BjHand = newCard.map(card => new BjHand(card ++ currentCards)) match {
+              case Some(hand) => hand
+              case _ =>
+                println("deck is out of cards!!!  Maybe need to reset the deck sooner...")
+                sys.exit()
+            }
+
+            println(s"dealer card: ${game.dealer.hand.cards.head.to_string}")
+
+            println(s"your cards: ${newHand.cards.map(_.to_string).mkString("")} | value: ${newHand.handValue()}")
+
+            play(
+              game.copy(
+                dealer=game.dealer.copy(
+                  shoe=newShoe
+                ),
+                player=game.player.copy(
+                  hand=newHand,
+                  bet=Some(game.player.bet.getOrElse(0.0) * 2)
+                ),
                 state="dealerAction"
               )
             )
