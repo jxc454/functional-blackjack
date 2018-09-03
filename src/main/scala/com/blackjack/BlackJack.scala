@@ -16,10 +16,10 @@ object BlackJack {
     }
 
     parser.parse(args, Config()) match {
-      case Some(config) => {
+      case Some(config) =>
         val message: String = config.message
         println (message)
-      }
+
       case None =>
     }
 
@@ -52,10 +52,10 @@ class BlackJackGame {
 
 
       case "getBets" =>
-        val bet = BlackJackGame.userBet()
+        val bet: Double = BlackJackGame.userBet()
 
         // check if bet is in range
-        if (bet <= game.minBet || bet >= game.maxBet) {
+        if (bet <= game.minBet || bet > game.maxBet) {
           println("that bet is out of range, try again.")
           play(game)
         } else {
@@ -75,31 +75,29 @@ class BlackJackGame {
           game.copy(
             dealer=game.dealer.copy(
               shoe=newShoe,
-              hand=Some(hands.head)),
+              hand=hands.head),
             player=game.player.copy(
-              hand=Some(hands(1))),
+              hand=hands(1)),
             state="action"
           )
         )
 
       case "action" =>
 
-        val action: String = scala.io.StdIn.readLine("your move:")
-
-        action match {
+        BlackJackGame.userAction() match {
           case "h" =>
             val (newCard: Option[Seq[BjCard]], newShoe: Shoe) = game.dealer.shoe.deal(1).run(game.dealer.shoe)
 
-            val currentCards: Seq[BjCard] = game.player.hand match {
-              case Some(hand) => hand.cards
-              case _ => sys.exit
+            val currentCards: Seq[BjCard] = game.player.hand.cards
+
+            val newHand: BjHand = newCard.map(card => new BjHand(card ++ currentCards)) match {
+              case Some(hand) => hand
+              case _ =>
+                println("deck is out of cards!!!  Maybe need to reset the deck sooner...")
+                sys.exit()
             }
 
-            val newHand: BjHand = newCard match {
-              case Some(card) => new BjHand(card ++ currentCards)
-              case _ => sys.exit
-            }
-            println(s"dealer card: ${game.dealer.hand match { case Some(h) => h.cards.head.to_string}}")
+            println(s"dealer card: ${game.dealer.hand.cards.head.to_string}")
 
             println(s"your cards: ${newHand.cards.map(_.to_string).mkString("")} | value: ${newHand.handValue()}")
 
@@ -108,7 +106,7 @@ class BlackJackGame {
                 dealer=game.dealer.copy(
                   shoe=newShoe),
                 player=game.player.copy(
-                hand=Some(newHand)),
+                hand=newHand),
                 state= if (newHand.handValue() > 21) "settleUp" else "action"
               )
             )
@@ -121,14 +119,11 @@ class BlackJackGame {
         }
 
       case "dealerAction" =>
-        game.dealer.rules.getAction(game.dealer.hand match { case Some(h) => h}) match {
+        game.dealer.rules.getAction(game.dealer.hand) match {
           case "hit" =>
             val (newCard: Option[Seq[BjCard]], newShoe: Shoe) = game.dealer.shoe.deal(1).run(game.dealer.shoe)
 
-            val currentCards: Seq[BjCard] = game.dealer.hand match {
-              case Some(hand) => hand.cards
-              case _ => sys.exit
-            }
+            val currentCards: Seq[BjCard] = game.dealer.hand.cards
 
             val newHand: BjHand = newCard match {
               case Some(card) => new BjHand(card ++ currentCards)
@@ -139,7 +134,7 @@ class BlackJackGame {
               game.copy(
                 dealer=game.dealer.copy(
                   shoe=newShoe,
-                  hand=Some(newHand)
+                  hand=newHand
                   ),
                 state="dealerAction"
               )
@@ -158,22 +153,22 @@ class BlackJackGame {
             )
         }
       case "settleUp" =>
-        val playerHandValue: Int = game.player.hand match {case Some(h) => h.handValue()}
-        val dealerHandValue: Int = game.dealer.hand match {case Some(h) => h.handValue()}
+        val playerHandValue: Int = game.player.hand.handValue()
+        val dealerHandValue: Int = game.dealer.hand.handValue()
 
         val newBalance: Double = if (
           (playerHandValue > dealerHandValue && playerHandValue <= 21) || dealerHandValue > 21) {
-          println(s"dealer cards: ${game.dealer.hand match { case Some(h) => h.to_string()}}")
+          println(s"dealer cards: ${game.dealer.hand.to_string()}")
           println("you win!")
 
           game.player.balance + game.player.bet.getOrElse(0.0)
         } else if ((playerHandValue < dealerHandValue && dealerHandValue <= 21) || playerHandValue > 21) {
-          println(s"dealer cards: ${game.dealer.hand match { case Some(h) => h.to_string()}}")
+          println(s"dealer cards: ${game.dealer.hand.to_string()}")
           println("sorry, you lose!")
 
           game.player.balance - game.player.bet.getOrElse(0.0)
         } else {
-          println(s"dealer cards: ${game.dealer.hand match { case Some(h) => h.to_string()}}")
+          println(s"dealer cards: ${game.dealer.hand.to_string()}")
           println("push!")
 
           game.player.balance
@@ -185,12 +180,12 @@ class BlackJackGame {
           minBet = 5,
           maxBet = 1000,
           player = game.player.copy(
-            hand = None,
+            hand = null,
             balance = newBalance,
             bet = None
           ),
           dealer = game.dealer.copy(
-            hand = None
+            hand = null
           ),
           state = "checkShoe"
         )
@@ -210,10 +205,21 @@ object BlackJackGame {
     try {
       StdIn.readDouble()
     } catch {
-      case e: Exception => {
+      case e: Exception =>
         println("couldn't accept that bet, try a different bet.")
         userBet()
-      }
+    }
+  }
+
+  @scala.annotation.tailrec
+  def userAction(): String = {
+    val action: String = scala.io.StdIn.readLine("your move:")
+
+    if (UserActions.actions.contains(action))
+      action
+    else {
+      println("invalid action, choose a valid action: " + UserActions.actions.mkString(", "))
+      userAction()
     }
   }
 
