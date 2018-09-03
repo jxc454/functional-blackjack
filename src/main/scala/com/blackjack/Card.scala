@@ -46,12 +46,7 @@ trait Hand[Card] {
   def to_string(): String
 }
 
-
-object BjHand {
-
-}
-
-class BjHand(val cards: Seq[BjCard]) extends Hand[BjCard] {
+class BjHand(val cards: Seq[BjCard], val bet: Double) extends Hand[BjCard] {
   def to_string(): String = cards.foldLeft("")((l, c) => l.concat(c.to_string))
 
   def handValue(): Int = this.cards.foldLeft(0)(_ + _.pip)

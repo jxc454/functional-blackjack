@@ -48,10 +48,9 @@ class BlackJackGame {
         // just check the size of the shoe, create a new one if the size is < n
         if (game.dealer.shoe.size < 15) {
           play(game.copy(dealer = new Dealer))
-        } else play(game.copy(state = "getBets"))
+        } else play(game.copy(state = "getBetsAndDeal"))
 
-
-      case "getBets" =>
+      case "getBetsAndDeal" =>
         val bet: Double = BlackJackGame.userBet()
 
         // check if bet is in range
@@ -59,26 +58,23 @@ class BlackJackGame {
           println("that bet is out of range, try again.")
           play(game)
         } else {
-          play(game.copy(player=game.player.copy(bet=Some(bet)), state="dealHands"))
-        }
+          // deal
+          val (handsCards: Seq[Seq[BjCard]], newShoe: Shoe) = BlackJackGame.dealHands(game.dealer.shoe)
 
-      case "dealHands" =>
-        val (hands: Seq[BjHand], newShoe: Shoe) = BlackJackGame.dealHands(game.dealer.shoe)
+          println(s"dealer card: ${hands.head.cards.head.to_string}")
+          println(s"your cards: ${hands(1).cards.map(_.to_string).mkString("")} | value: ${hands(1).handValue()}")
 
-        println(s"dealer card: ${hands.head.cards.head.to_string}")
-
-        println(s"your cards: ${hands(1).cards.map(_.to_string).mkString("")} | value: ${hands(1).handValue()}")
-
-        play(
-          game.copy(
-            dealer=game.dealer.copy(
-              shoe=newShoe,
-              hand=hands.head),
-            player=game.player.copy(
-              hand=hands(1)),
-            state="action"
+          play(
+            game.copy(
+              dealer = game.dealer.copy(
+                shoe = newShoe,
+                hand = hands.head),
+              player = game.player.copy(
+                hand = hands(1)),
+              state = "action"
+            )
           )
-        )
+        }
 
       case "action" =>
 
@@ -250,8 +246,8 @@ object BlackJackGame {
   }
 
   @scala.annotation.tailrec
-  def dealHands(shoe: Shoe): (Seq[BjHand], Shoe) = {
-    val (hands: Option[Seq[BjHand]], newShoe) = Shoe.dealMultipleHands(shoe, 2)
+  def dealHands(shoe: Shoe): (Seq[Seq[BjCard]], Shoe) = {
+    val (hands: Option[Seq[Seq[BjCard]]], newShoe) = Shoe.dealMultipleHands(shoe, 2)
 
     hands match {
       case Some(handsList) => (handsList, newShoe)
