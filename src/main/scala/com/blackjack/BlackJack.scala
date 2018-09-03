@@ -1,7 +1,7 @@
 package com.blackjack
 
-import scopt.OptionParser
 import scala.io.StdIn
+import scopt.OptionParser
 
 case class Config(message: String = "")
 
@@ -78,10 +78,124 @@ class BlackJackGame {
               hand=Some(hands.head)),
             player=game.player.copy(
               hand=Some(hands(1))),
-            state="getBets"
+            state="action"
           )
         )
 
+      case "action" =>
+
+        val action: String = scala.io.StdIn.readLine("your move:")
+
+        action match {
+          case "h" =>
+            val (newCard: Option[Seq[BjCard]], newShoe: Shoe) = game.dealer.shoe.deal(1).run(game.dealer.shoe)
+
+            val currentCards: Seq[BjCard] = game.player.hand match {
+              case Some(hand) => hand.cards
+              case _ => sys.exit
+            }
+
+            val newHand: BjHand = newCard match {
+              case Some(card) => new BjHand(card ++ currentCards)
+              case _ => sys.exit
+            }
+            println(s"dealer card: ${game.dealer.hand match { case Some(h) => h.cards.head.to_string}}")
+
+            println(s"your cards: ${newHand.cards.map(_.to_string).mkString("")} | value: ${newHand.handValue()}")
+
+            play(
+              game.copy(
+                dealer=game.dealer.copy(
+                  shoe=newShoe),
+                player=game.player.copy(
+                hand=Some(newHand)),
+                state= if (newHand.handValue() > 21) "settleUp" else "action"
+              )
+            )
+          case "s" =>
+            play(
+              game.copy(
+                state="dealerAction"
+              )
+            )
+        }
+
+      case "dealerAction" =>
+        game.dealer.rules.getAction(game.dealer.hand match { case Some(h) => h}) match {
+          case "hit" =>
+            val (newCard: Option[Seq[BjCard]], newShoe: Shoe) = game.dealer.shoe.deal(1).run(game.dealer.shoe)
+
+            val currentCards: Seq[BjCard] = game.dealer.hand match {
+              case Some(hand) => hand.cards
+              case _ => sys.exit
+            }
+
+            val newHand: BjHand = newCard match {
+              case Some(card) => new BjHand(card ++ currentCards)
+              case _ => sys.exit
+            }
+
+            play(
+              game.copy(
+                dealer=game.dealer.copy(
+                  shoe=newShoe,
+                  hand=Some(newHand)
+                  ),
+                state="dealerAction"
+              )
+            )
+          case "stay" =>
+            play(
+              game.copy(
+                state="settleUp"
+              )
+            )
+          case _ =>
+            play(
+              game.copy(
+                state="settleUp"
+              )
+            )
+        }
+      case "settleUp" =>
+        val playerHandValue: Int = game.player.hand match {case Some(h) => h.handValue()}
+        val dealerHandValue: Int = game.dealer.hand match {case Some(h) => h.handValue()}
+
+        val newBalance: Double = if (
+          (playerHandValue > dealerHandValue && playerHandValue <= 21) || dealerHandValue > 21) {
+          println(s"dealer cards: ${game.dealer.hand match { case Some(h) => h.to_string()}}")
+          println("you win!")
+
+          game.player.balance + game.player.bet.getOrElse(0.0)
+        } else if ((playerHandValue < dealerHandValue && dealerHandValue <= 21) || playerHandValue > 21) {
+          println(s"dealer cards: ${game.dealer.hand match { case Some(h) => h.to_string()}}")
+          println("sorry, you lose!")
+
+          game.player.balance - game.player.bet.getOrElse(0.0)
+        } else {
+          println(s"dealer cards: ${game.dealer.hand match { case Some(h) => h.to_string()}}")
+          println("push!")
+
+          game.player.balance
+        }
+
+        println(s"your balance is $newBalance")
+
+        val newGame = Game(
+          minBet = 5,
+          maxBet = 1000,
+          player = game.player.copy(
+            hand = None,
+            balance = newBalance,
+            bet = None
+          ),
+          dealer = game.dealer.copy(
+            hand = None
+          ),
+          state = "checkShoe"
+        )
+
+        (new BlackJackGame).play(newGame)
     }
   }
 }

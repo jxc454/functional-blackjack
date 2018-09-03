@@ -3,7 +3,7 @@ package com.blackjack
 
 object DealerRules {
   def getAction(hand: BjHand): String = {
-    actionMap(hand.handValue())
+    actionMap.getOrElse(hand.handValue(), "stay")
   }
 
   val actionMap: Map[Int, String] = Map(
