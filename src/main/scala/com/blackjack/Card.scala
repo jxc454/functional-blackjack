@@ -35,7 +35,7 @@ class BjCard(val pipName: String, val group: String) extends Card {
     case x => x.toInt
   }
 
-  def to_string: String = this.pipName.concat(this.group)
+  def to_string(): String = this.pipName.concat(this.group)
 
   val pip: Int = getPipValue(pipName)
   val suit: String = group
@@ -46,8 +46,8 @@ trait Hand[Card] {
   def to_string(): String
 }
 
-class BjHand(val cards: Seq[BjCard], val bet: Double) extends Hand[BjCard] {
-  def to_string(): String = cards.foldLeft("")((l, c) => l.concat(c.to_string))
+case class BjHand(cards: Seq[BjCard], bet: Double) extends Hand[BjCard] {
+  def to_string(): String = cards.foldLeft("")((l, c) => l.concat(c.to_string()))
 
   def handValue(): Int = this.cards.foldLeft(0)(_ + _.pip)
 }
