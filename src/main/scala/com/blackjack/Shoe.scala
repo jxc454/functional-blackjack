@@ -1,12 +1,12 @@
 package com.blackjack
 
 object Shoe {
-  def dealMultipleHands(shoe: Shoe, n: Int): (Option[Seq[BjHand]], Shoe) = {
-    val (hands, newShoe) = State.sequence(Seq.fill(n)(shoe.dealHand(2))).run(shoe)
+  def dealMultipleHands(shoe: Shoe, n: Int): (Option[Seq[Seq[BjCard]]], Shoe) = {
+    val (hands: Seq[Option[Seq[BjCard]]], newShoe: Shoe) = State.sequence(Seq.fill(n)(shoe.dealCards(2))).run(shoe)
 
-    // convert Seq[Option] to Option[Seq]
-    val invertedHands: Option[Seq[BjHand]] = hands.foldLeft(Some(Nil): Option[Seq[BjHand]])((acc, hand) => hand match {
-      case Some(handOpt) => acc.map(handOpt +: _)
+    // convert Seq[Option[Seq]] to Option[Seq[Seq]]
+    val invertedHands: Option[Seq[Seq[BjCard]]] = hands.foldLeft(Some(Nil): Option[Seq[Seq[BjCard]]])((acc, hand) => hand match {
+      case Some(cardsOpt) => acc.map(cardsOpt +: _)
       case None => None
     })
 
@@ -20,11 +20,11 @@ class Shoe(cardsIn: Seq[BjCard])(shuffle: Boolean=false) {
 
   val size: Int = cards.size
 
-  def dealHand(n: Int): State[Shoe, Option[BjHand]] = {
+  def dealCards(n: Int): State[Shoe, Option[Seq[BjCard]]] = {
     State(shoe => {
       val (cardsOp: Option[Seq[BjCard]], newShoe: Shoe) = deal(n).run(shoe)
 
-      (cardsOp.map(cards => new BjHand(cards)), newShoe)
+      (cardsOp, newShoe)
 
     })
   }
