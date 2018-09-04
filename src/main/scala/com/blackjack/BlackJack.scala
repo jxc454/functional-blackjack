@@ -66,7 +66,6 @@ class BlackJackGame {
           val dealerHand: BjHand = BjHand(handsCards(1), 0.0)
 
           println(s"dealer card: ${dealerHand.cards.head.to_string()}")
-          println(s"your cards: ${playerHand.to_string()} | value: ${playerHand.handValue()}")
 
           play(
             game.copy(
@@ -74,139 +73,80 @@ class BlackJackGame {
                 shoe = newShoe,
                 hand = dealerHand),
               player = game.player.copy(
-                hand = playerHand),
+                hands = Seq(playerHand)),
               state = "action"
             )
           )
         }
 
       case "action" =>
-
-        BlackJackGame.userAction() match {
-          case "h" =>
-            val (newCard: Option[Seq[BjCard]], newShoe: Shoe) = game.dealer.shoe.deal(1).run(game.dealer.shoe)
-
-            val newHand: BjHand = newCard.map(card => game.player.hand.copy(cards=card ++ game.player.hand.cards)) match {
-              case Some(hand) => hand
-              case _ =>
-                println("deck is out of cards!!!  Maybe need to reset the deck sooner...")
-                sys.exit()
-            }
-
-            println(s"dealer card: ${game.dealer.hand.cards.head.to_string()}")
-            println(s"your cards: ${newHand.cards.map(_.to_string()).mkString("")} | value: ${newHand.handValue()}")
-
-            play(
-              game.copy(
-                dealer=game.dealer.copy(
-                  shoe=newShoe),
-                player=game.player.copy(
-                hand=newHand),
-                state= if (newHand.handValue() > 21) "settleUp" else "action"
-              )
-            )
-          case "s" =>
-            play(
-              game.copy(
-                state="dealerAction"
-              )
-            )
-          case "d" =>
-            val (newCard: Option[Seq[BjCard]], newShoe: Shoe) = game.dealer.shoe.deal(1).run(game.dealer.shoe)
-
-            val newHand: BjHand = newCard.map(card =>
-              BjHand(cards=card ++ game.player.hand.cards, bet=game.player.hand.bet * 2)) match {
-                case Some(hand) => hand
-                case _ =>
-                  println("deck is out of cards!!!  Maybe need to reset the deck sooner...")
-                  sys.exit()
-            }
-
-            println(s"dealer card: ${game.dealer.hand.cards.head.to_string()}")
-            println(s"your cards: ${newHand.cards.map(_.to_string()).mkString("")} | value: ${newHand.handValue()}")
-
-            play(
-              game.copy(
-                dealer=game.dealer.copy(
-                  shoe=newShoe
-                ),
-                player=game.player.copy(
-                  hand=newHand
-                ),
-                state="dealerAction"
-              )
-            )
-          case "r" =>
-            play(
-              game.copy(
-                player=game.player.copy(
-                  hand=game.player.hand.copy(
-                    surrendered=true
-                  )
-                ),
-                state="settleUp"
-              )
-            )
-        }
+        play(
+          game.player.hands.foldLeft(game.copy(player=game.player.copy(hands=Seq())))((acc, hand) =>
+          BlackJackGame.action(acc, hand))
+            .copy(state="dealerAction")
+        )
 
       case "dealerAction" =>
-        game.dealer.rules.getAction(game.dealer.hand) match {
-          case "hit" =>
-            val (newCard: Option[Seq[BjCard]], newShoe: Shoe) = game.dealer.shoe.deal(1).run(game.dealer.shoe)
+        if (game.player.hands.isEmpty) {
+          println(s"dealer cards: ${game.dealer.hand.to_string()}")
 
-            val newHand: BjHand = newCard match {
-              case Some(card) => game.dealer.hand.copy(cards=card ++ game.dealer.hand.cards)
-              case _ => sys.exit
-            }
+          play(
+            game.copy(state="checkShoe")
+          )
+        } else {
+          game.dealer.rules.getAction(game.dealer.hand) match {
+            case "hit" =>
+              val (newCard: Option[Seq[BjCard]], newShoe: Shoe) = game.dealer.shoe.deal(1).run(game.dealer.shoe)
 
-            play(
-              game.copy(
-                dealer=game.dealer.copy(
-                  shoe=newShoe,
-                  hand=newHand
-                  ),
-                state="dealerAction"
+              val newHand: BjHand = newCard match {
+                case Some(card) => game.dealer.hand.copy(cards=card ++ game.dealer.hand.cards)
+                case _ => sys.exit
+              }
+
+              play(
+                game.copy(
+                  dealer=game.dealer.copy(
+                    shoe=newShoe,
+                    hand=newHand),
+                  state="dealerAction"
+                )
               )
-            )
-          case "stay" =>
-            play(
-              game.copy(
-                state="settleUp"
+            case "stay" =>
+              play(
+                game.copy(
+                  state="settleUp"
+                )
               )
-            )
-          case _ =>
-            play(
-              game.copy(
-                state="settleUp"
+            case _ =>
+              play(
+                game.copy(
+                  state="settleUp"
+                )
               )
-            )
+          }
         }
+
+
       case "settleUp" =>
-        val playerHandValue: Int = game.player.hand.handValue()
+        println(s"dealer cards: ${game.dealer.hand.to_string()}")
+
         val dealerHandValue: Int = game.dealer.hand.handValue()
 
-        val newBalance: Double = if (game.player.hand.surrendered) {
-          println(s"dealer cards: ${game.dealer.hand.to_string()}")
-          println("you surrendered!")
-
-          game.player.balance - game.player.hand.bet / 2
-        } else if (
-          (playerHandValue > dealerHandValue && playerHandValue <= 21) || dealerHandValue > 21) {
-          println(s"dealer cards: ${game.dealer.hand.to_string()}")
-          println("you win!")
-
-          game.player.balance + game.player.hand.bet
-        } else if ((playerHandValue < dealerHandValue && dealerHandValue <= 21) || playerHandValue > 21) {
-          println(s"dealer cards: ${game.dealer.hand.to_string()}")
-          println("sorry, you lose!")
-
-          game.player.balance - game.player.hand.bet
-        } else {
-          println(s"dealer cards: ${game.dealer.hand.to_string()}")
-          println("push!")
-
-          game.player.balance
-        }
+        val newBalance: Double = game.player.hands.foldLeft(game.player.balance)((acc, hand) => {
+          if (dealerHandValue > 21) {
+            println("dealer busted!")
+            acc + hand.bet
+          } else if (hand.handValue() < dealerHandValue) {
+            println("you lose!")
+            acc - hand.bet
+          } else if (hand.handValue() > dealerHandValue) {
+            println("you won!")
+            acc + hand.bet
+          } else if (hand.handValue() == dealerHandValue) {
+            println("push!")
+            acc
+          } else acc
+        })
 
         println(s"balance: $newBalance")
 
@@ -214,7 +154,7 @@ class BlackJackGame {
           minBet = 5,
           maxBet = 1000,
           player = game.player.copy(
-            hand = null,
+            hands = Seq(),
             balance = newBalance
           ),
           dealer = game.dealer.copy(
@@ -228,8 +168,109 @@ class BlackJackGame {
   }
 }
 
-
 object BlackJackGame {
+
+  def action(game: Game, hand: BjHand): Game = {
+    println(s"your cards: ${hand.to_string()} | value: ${hand.handValue()}")
+
+    BlackJackGame.userAction() match {
+      case "h" =>
+        val (newCard: Option[Seq[BjCard]], newShoe: Shoe) = game.dealer.shoe.deal(1).run(game.dealer.shoe)
+
+        val newHand: BjHand = newCard.map(card => card ++ hand.cards) match {
+          case Some(cards) => hand.copy(cards=cards)
+          case _ =>
+            println("deck is out of cards!!!  Maybe need to reset the deck sooner...")
+            sys.exit()
+        }
+
+
+        if (newHand.handValue > 21) {
+          println(s"your cards: ${newHand.to_string()} | value: ${newHand.handValue()}")
+          println("you busted!")
+          println(s"balance: ${game.player.balance - hand.bet}")
+
+          // hand busted
+          game.copy(
+            dealer=game.dealer.copy(
+              shoe=newShoe),
+            player=game.player.copy(
+              balance=game.player.balance - hand.bet
+            )
+          )
+
+        } else {
+          // no bust, prompt for next action
+          action(game.copy(
+            dealer=game.dealer.copy(
+              shoe=newShoe)
+          ), newHand)
+        }
+
+      case "s" =>
+        game.copy(
+          player=game.player.copy(hands=hand +: game.player.hands)
+        )
+
+      case "d" =>
+        if (!BlackJackGame.checkCanDD(hand)){
+          println("too late to double down!")
+          action(game, hand)
+        } else {
+          val (newCard: Option[Seq[BjCard]], newShoe: Shoe) = game.dealer.shoe.deal(1).run(game.dealer.shoe)
+
+          val newHand: BjHand = newCard.map(card => card ++ hand.cards) match {
+            case Some(cards) => BjHand(cards = cards, bet = hand.bet * 2)
+            case _ =>
+              println("deck is out of cards!!!  Maybe need to reset the deck sooner...")
+              sys.exit()
+          }
+
+          println(s"your cards: ${newHand.cards.map(_.to_string()).mkString("")} | value: ${newHand.handValue()}")
+
+          if (newHand.handValue > 21) {
+            // hand busted
+            game.copy(
+              dealer = game.dealer.copy(shoe = newShoe),
+              player = game.player.copy(balance = game.player.balance - newHand.bet))
+          } else {
+            // no bust
+            game.copy(
+              dealer = game.dealer.copy(shoe = newShoe),
+              player = game.player.copy(hands = newHand +: game.player.hands))
+          }
+        }
+
+      case "r" =>
+        println("you surrendered!")
+        println(s"balance: ${game.player.balance - hand.bet / 2}")
+
+        game.copy(
+          player=game.player.copy(balance=game.player.balance - hand.bet / 2)
+        )
+
+      case "p" =>
+        if (!checkSplittable(hand)) {
+          println("Sorry, can't split that hand!")
+          action(game, hand)
+        } else {
+          hand.cards.foldLeft(game)((acc, card) => {
+            val (newCardOp: Option[Seq[BjCard]], newShoe: Shoe) = acc.dealer.shoe.deal(1).run(acc.dealer.shoe)
+
+            val newHand: BjHand = newCardOp.map(newCard => card +: newCard) match {
+              case Some(cards) => BjHand(cards=cards, bet=hand.bet)
+              case _ =>
+                println("deck is out of cards!!!  Maybe need to reset the deck sooner...")
+                sys.exit()
+            }
+
+            action(acc.copy(dealer=acc.dealer.copy(shoe=newShoe)), newHand)
+          })
+        }
+    }
+  }
+
+
   @scala.annotation.tailrec
   def userBet(): Double = {
     // prompt player for bet amount
@@ -246,6 +287,7 @@ object BlackJackGame {
 
   @scala.annotation.tailrec
   def userAction(): String = {
+    // prompt user to select an action
     val action: String = scala.io.StdIn.readLine("your move:")
 
     if (UserActions.actions.contains(action))
@@ -265,4 +307,12 @@ object BlackJackGame {
       case None => dealHands(BjCard.createShoe(1))
     }
   }
+
+  def checkSplittable(hand: BjHand): Boolean = {
+    val (card1, card2) = hand.cards.splitAt(1)
+    card1.head.pip == card2.head.pip
+  }
+
+  def checkCanDD(hand: BjHand): Boolean = hand.cards.length == 2
+
 }

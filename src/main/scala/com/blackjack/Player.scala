@@ -1,5 +1,5 @@
 package com.blackjack
 
 case class Player(
-  hand: BjHand = null,
+  hands: Seq[BjHand] = null,
   balance: Double = 0.0)
