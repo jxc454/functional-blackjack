@@ -20,6 +20,14 @@ class Shoe(cardsIn: Seq[BjCard])(shuffle: Boolean=false) {
 
   val size: Int = cards.size
 
+  val trueCount: Double = cards.foldLeft(0)((acc, card) => {
+    if (card.pip >= 10) {
+      acc + 1
+    } else if (card.pip <= 6) {
+      acc - 1
+    } else acc
+  }) / (size / 52.toDouble)
+
   def dealCards(n: Int): State[Shoe, Option[Seq[BjCard]]] = {
     State(shoe => {
       val (cardsOp: Option[Seq[BjCard]], newShoe: Shoe) = deal(n).run(shoe)

@@ -51,6 +51,8 @@ class BlackJackGame {
         } else play(game.copy(state = "dealHands"))
 
       case "dealHands" =>
+        println(s"true count: ${"%.2f".format(game.dealer.shoe.trueCount).toDouble}")
+
         // get bet
         val bet: Double = BlackJackGame.userBet()
 
