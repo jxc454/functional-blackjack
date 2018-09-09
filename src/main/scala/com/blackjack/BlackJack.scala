@@ -247,16 +247,17 @@ object BlackJackGame {
                 sys.exit()
             }
 
-            println(s"your cards: ${newHand.cards.map(_.to_string()).mkString("")} | value: ${newHand.finalValue()}")
+            println(s"your cards: ${newHand.cards.map(_.to_string()).mkString("")}" +
+              (if (newHand.finalValue() > 21) "" else s"| value: ${newHand.finalValue()}"))
 
             if (newHand.finalValue > 21) {
               // hand busted
               println("you busted!")
-              println(s"balance: ${game.player.balance - hand.bet}")
+              println(s"balance: ${game.player.balance - hand.bet * 2}")
 
               game.copy(
                 dealer = game.dealer.copy(shoe = newShoe),
-                player = game.player.copy(balance = game.player.balance - newHand.bet))
+                player = game.player.copy(balance = game.player.balance - newHand.bet * 2))
             } else {
               // no bust
               game.copy(
