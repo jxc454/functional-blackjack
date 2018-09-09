@@ -1,27 +1,11 @@
 package com.blackjack
 
 import scala.io.StdIn
-import scopt.OptionParser
 
 case class Config(message: String = "")
 
 object BlackJack {
   def main(args: Array[String]): Unit = {
-
-    // example scopt snippets
-    val parser = new OptionParser[Config]("scopt") {
-      head("scopt", "3.x")
-
-      opt[String]('i', "input") /*required()*/ action { (x, c) => c.copy(message = x) } text "playback message"
-    }
-
-    parser.parse(args, Config()) match {
-      case Some(config) =>
-        val message: String = config.message
-        println (message)
-
-      case None =>
-    }
 
     println("Let's play BlackJack!")
 
@@ -331,17 +315,6 @@ object BlackJackGame {
   def checkCanSurrender(hand: BjHand): Boolean = hand.cards.length == 2
 
   def addOneCard(game: Game, hand: BjHand, newBet: Double): (BjHand, Shoe) = {
-//    val (newCard: Option[Seq[BjCard]], newShoe: Shoe) = game.dealer.shoe.deal(1).run(game.dealer.shoe)
-//
-//    val newHand: BjHand = newCard.map(card => card ++ hand.cards) match {
-//      case Some(cards) => BjHand(cards = cards, bet = hand.bet * 2)
-//      case _ =>
-//        println("deck is out of cards!!!  Maybe need to reset the deck sooner...")
-//        sys.exit()
-//    }
-
-//    (newHand, newShoe)
-
     game.dealer.shoe.deal(1).flatMap(newCard =>
       State(newShoe => {
         val newHand: BjHand = newCard.map(card => card ++ hand.cards) match {
