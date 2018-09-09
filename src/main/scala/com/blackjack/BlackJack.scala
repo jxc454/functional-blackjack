@@ -132,19 +132,21 @@ class BlackJackGame {
       case "settleUp" =>
         println(s"dealer cards: ${game.dealer.hand.to_string()}")
 
-        val dealerHandValue: Int = game.dealer.hand.handValue()
+        val dealerHandValue: Int = game.dealer.hand.finalValue()
 
         val newBalance: Double = game.player.hands.foldLeft(game.player.balance)((acc, hand) => {
+          val playerHandValue: Int = hand.finalValue()
+
           if (dealerHandValue > 21) {
             println("dealer busted!")
             acc + hand.bet
-          } else if (hand.handValue() < dealerHandValue) {
+          } else if (playerHandValue < dealerHandValue) {
             println("you lose!")
             acc - hand.bet
-          } else if (hand.handValue() > dealerHandValue) {
+          } else if (playerHandValue > dealerHandValue) {
             println("you won!")
             acc + hand.bet
-          } else if (hand.handValue() == dealerHandValue) {
+          } else if (playerHandValue == dealerHandValue) {
             println("push!")
             acc
           } else acc
@@ -173,7 +175,10 @@ class BlackJackGame {
 object BlackJackGame {
 
   def action(game: Game, hand: BjHand): Game = {
-    println(s"your cards: ${hand.to_string()} | value: ${hand.handValue()}")
+    println(s"your cards: ${hand.to_string()} | value: " +
+      s"${if (hand.soft) hand.lowValue + "/" + hand.handValue() else hand.finalValue()}" +
+      s"${if (hand.cards.size == 2 && hand.cards.head.pipName == hand.cards(1).pipName) " (splittable)" else ""}"
+    )
 
     BlackJackGame.userAction() match {
       case "h" =>
@@ -186,9 +191,8 @@ object BlackJackGame {
             sys.exit()
         }
 
-
-        if (newHand.handValue > 21) {
-          println(s"your cards: ${newHand.to_string()} | value: ${newHand.handValue()}")
+        if (Seq(newHand.handValue(), newHand.lowValue()).min > 21) {
+          println(s"your cards: ${newHand.to_string()}")
           println("you busted!")
           println(s"balance: ${game.player.balance - hand.bet}")
 
@@ -228,9 +232,9 @@ object BlackJackGame {
               sys.exit()
           }
 
-          println(s"your cards: ${newHand.cards.map(_.to_string()).mkString("")} | value: ${newHand.handValue()}")
+          println(s"your cards: ${newHand.cards.map(_.to_string()).mkString("")} | value: ${newHand.finalValue()}")
 
-          if (newHand.handValue > 21) {
+          if (newHand.finalValue > 21) {
             // hand busted
             game.copy(
               dealer = game.dealer.copy(shoe = newShoe),
