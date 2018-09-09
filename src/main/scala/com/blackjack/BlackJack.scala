@@ -69,6 +69,11 @@ class BlackJackGame {
 
           println(s"dealer card: ${dealerHand.cards.head.to_string()}")
 
+          val nextState: String = if (dealerHand.handValue() == 21) {
+            println(s"your cards: ${playerHand.to_string()}")
+            "settleUp"
+          } else "action"
+
           play(
             game.copy(
               dealer = game.dealer.copy(
@@ -76,7 +81,7 @@ class BlackJackGame {
                 hand = dealerHand),
               player = game.player.copy(
                 hands = Seq(playerHand)),
-              state = "action"
+              state = nextState
             )
           )
         }
@@ -127,7 +132,6 @@ class BlackJackGame {
               )
           }
         }
-
 
       case "settleUp" =>
         println(s"dealer cards: ${game.dealer.hand.to_string()}")
@@ -180,100 +184,116 @@ object BlackJackGame {
       s"${if (hand.cards.size == 2 && hand.cards.head.pipName == hand.cards(1).pipName) " (splittable)" else ""}"
     )
 
-    BlackJackGame.userAction() match {
-      case "h" =>
-        val (newCard: Option[Seq[BjCard]], newShoe: Shoe) = game.dealer.shoe.deal(1).run(game.dealer.shoe)
+    if (hand.handValue == 21 && hand.cards.size == 2) {
+      println("you got BlackJack!")
+      println(s"balance: ${game.player.balance + 1.5 * hand.bet}")
 
-        val newHand: BjHand = newCard.map(card => card ++ hand.cards) match {
-          case Some(cards) => hand.copy(cards=cards)
-          case _ =>
-            println("deck is out of cards!!!  Maybe need to reset the deck sooner...")
-            sys.exit()
-        }
-
-        if (Seq(newHand.handValue(), newHand.lowValue()).min > 21) {
-          println(s"your cards: ${newHand.to_string()}")
-          println("you busted!")
-          println(s"balance: ${game.player.balance - hand.bet}")
-
-          // hand busted
-          game.copy(
-            dealer=game.dealer.copy(
-              shoe=newShoe),
-            player=game.player.copy(
-              balance=game.player.balance - hand.bet
-            )
-          )
-
-        } else {
-          // no bust, prompt for next action
-          action(game.copy(
-            dealer=game.dealer.copy(
-              shoe=newShoe)
-          ), newHand)
-        }
-
-      case "s" =>
-        game.copy(
-          player=game.player.copy(hands=hand +: game.player.hands)
+      game.copy(
+        player=game.player.copy(
+          balance=game.player.balance + 1.5 * hand.bet
         )
-
-      case "d" =>
-        if (!BlackJackGame.checkCanDD(hand)){
-          println("too late to double down!")
-          action(game, hand)
-        } else {
+      )
+    }
+    else {
+      BlackJackGame.userAction() match {
+        case "h" =>
           val (newCard: Option[Seq[BjCard]], newShoe: Shoe) = game.dealer.shoe.deal(1).run(game.dealer.shoe)
 
           val newHand: BjHand = newCard.map(card => card ++ hand.cards) match {
-            case Some(cards) => BjHand(cards = cards, bet = hand.bet * 2)
+            case Some(cards) => hand.copy(cards=cards)
             case _ =>
               println("deck is out of cards!!!  Maybe need to reset the deck sooner...")
               sys.exit()
           }
 
-          println(s"your cards: ${newHand.cards.map(_.to_string()).mkString("")} | value: ${newHand.finalValue()}")
+          if (Seq(newHand.handValue(), newHand.lowValue()).min > 21) {
+            println(s"your cards: ${newHand.to_string()}")
+            println("you busted!")
+            println(s"balance: ${game.player.balance - hand.bet}")
 
-          if (newHand.finalValue > 21) {
             // hand busted
             game.copy(
-              dealer = game.dealer.copy(shoe = newShoe),
-              player = game.player.copy(balance = game.player.balance - newHand.bet))
+              dealer=game.dealer.copy(
+                shoe=newShoe),
+              player=game.player.copy(
+                balance=game.player.balance - hand.bet
+              )
+            )
+
           } else {
-            // no bust
-            game.copy(
-              dealer = game.dealer.copy(shoe = newShoe),
-              player = game.player.copy(hands = newHand +: game.player.hands))
+            // no bust, prompt for next action
+            action(game.copy(
+              dealer=game.dealer.copy(
+                shoe=newShoe)
+            ), newHand)
           }
-        }
 
-      case "r" =>
-        println("you surrendered!")
-        println(s"balance: ${game.player.balance - hand.bet / 2}")
+        case "s" =>
+          game.copy(
+            player=game.player.copy(hands=hand +: game.player.hands)
+          )
 
-        game.copy(
-          player=game.player.copy(balance=game.player.balance - hand.bet / 2)
-        )
+        case "d" =>
+          if (!BlackJackGame.checkCanDD(hand)){
+            println("too late to double down!")
+            action(game, hand)
+          } else {
+            val (newCard: Option[Seq[BjCard]], newShoe: Shoe) = game.dealer.shoe.deal(1).run(game.dealer.shoe)
 
-      case "p" =>
-        if (!checkSplittable(hand)) {
-          println("Sorry, can't split that hand!")
-          action(game, hand)
-        } else {
-          hand.cards.foldLeft(game)((acc, card) => {
-            val (newCardOp: Option[Seq[BjCard]], newShoe: Shoe) = acc.dealer.shoe.deal(1).run(acc.dealer.shoe)
-
-            val newHand: BjHand = newCardOp.map(newCard => card +: newCard) match {
-              case Some(cards) => BjHand(cards=cards, bet=hand.bet)
+            val newHand: BjHand = newCard.map(card => card ++ hand.cards) match {
+              case Some(cards) => BjHand(cards = cards, bet = hand.bet * 2)
               case _ =>
                 println("deck is out of cards!!!  Maybe need to reset the deck sooner...")
                 sys.exit()
             }
 
-            action(acc.copy(dealer=acc.dealer.copy(shoe=newShoe)), newHand)
-          })
-        }
+            println(s"your cards: ${newHand.cards.map(_.to_string()).mkString("")} | value: ${newHand.finalValue()}")
+
+            if (newHand.finalValue > 21) {
+              // hand busted
+              println("you busted!")
+              println(s"balance: ${game.player.balance - hand.bet}")
+
+              game.copy(
+                dealer = game.dealer.copy(shoe = newShoe),
+                player = game.player.copy(balance = game.player.balance - newHand.bet))
+            } else {
+              // no bust
+              game.copy(
+                dealer = game.dealer.copy(shoe = newShoe),
+                player = game.player.copy(hands = newHand +: game.player.hands))
+            }
+          }
+
+        case "r" =>
+          println("you surrendered!")
+          println(s"balance: ${game.player.balance - hand.bet / 2}")
+
+          game.copy(
+            player=game.player.copy(balance=game.player.balance - hand.bet / 2)
+          )
+
+        case "p" =>
+          if (!checkSplittable(hand)) {
+            println("Sorry, can't split that hand!")
+            action(game, hand)
+          } else {
+            hand.cards.foldLeft(game)((acc, card) => {
+              val (newCardOp: Option[Seq[BjCard]], newShoe: Shoe) = acc.dealer.shoe.deal(1).run(acc.dealer.shoe)
+
+              val newHand: BjHand = newCardOp.map(newCard => card +: newCard) match {
+                case Some(cards) => BjHand(cards=cards, bet=hand.bet)
+                case _ =>
+                  println("deck is out of cards!!!  Maybe need to reset the deck sooner...")
+                  sys.exit()
+              }
+
+              action(acc.copy(dealer=acc.dealer.copy(shoe=newShoe)), newHand)
+            })
+          }
+      }
     }
+
   }
 
 
