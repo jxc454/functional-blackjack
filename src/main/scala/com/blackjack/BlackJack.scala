@@ -103,12 +103,7 @@ class BlackJackGame {
         } else {
           game.dealer.rules.getAction(game.dealer.hand) match {
             case "hit" =>
-              val (newCard: Option[Seq[BjCard]], newShoe: Shoe) = game.dealer.shoe.deal(1).run(game.dealer.shoe)
-
-              val newHand: BjHand = newCard match {
-                case Some(card) => game.dealer.hand.copy(cards=card ++ game.dealer.hand.cards)
-                case _ => sys.exit
-              }
+              val (newHand: BjHand, newShoe: Shoe) = BlackJackGame.addOneCard(game, game.dealer.hand, 0)
 
               play(
                 game.copy(
@@ -197,14 +192,7 @@ object BlackJackGame {
     else {
       BlackJackGame.userAction() match {
         case "h" =>
-          val (newCard: Option[Seq[BjCard]], newShoe: Shoe) = game.dealer.shoe.deal(1).run(game.dealer.shoe)
-
-          val newHand: BjHand = newCard.map(card => card ++ hand.cards) match {
-            case Some(cards) => hand.copy(cards=cards)
-            case _ =>
-              println("deck is out of cards!!!  Maybe need to reset the deck sooner...")
-              sys.exit()
-          }
+          val (newHand: BjHand, newShoe: Shoe) = BlackJackGame.addOneCard(game, hand, hand.bet)
 
           if (Seq(newHand.handValue(), newHand.lowValue()).min > 21) {
             println(s"your cards: ${newHand.to_string()}")
@@ -238,17 +226,10 @@ object BlackJackGame {
             println("too late to double down!")
             action(game, hand)
           } else {
-            val (newCard: Option[Seq[BjCard]], newShoe: Shoe) = game.dealer.shoe.deal(1).run(game.dealer.shoe)
-
-            val newHand: BjHand = newCard.map(card => card ++ hand.cards) match {
-              case Some(cards) => BjHand(cards = cards, bet = hand.bet * 2)
-              case _ =>
-                println("deck is out of cards!!!  Maybe need to reset the deck sooner...")
-                sys.exit()
-            }
+            val (newHand: BjHand, newShoe: Shoe) = BlackJackGame.addOneCard(game, hand, hand.bet * 2)
 
             println(s"your cards: ${newHand.cards.map(_.to_string()).mkString("")}" +
-              (if (newHand.finalValue() > 21) "" else s"| value: ${newHand.finalValue()}"))
+              (if (newHand.finalValue() > 21) "" else s" | value: ${newHand.finalValue()}"))
 
             if (newHand.finalValue > 21) {
               // hand busted
@@ -267,12 +248,17 @@ object BlackJackGame {
           }
 
         case "r" =>
-          println("you surrendered!")
-          println(s"balance: ${game.player.balance - hand.bet / 2}")
+          if (!checkCanSurrender(hand)) {
+            println("Sorry, too late to surrender!")
+            action(game, hand)
+          } else {
+            println("you surrendered!")
+            println(s"balance: ${game.player.balance - hand.bet / 2}")
 
-          game.copy(
-            player=game.player.copy(balance=game.player.balance - hand.bet / 2)
-          )
+            game.copy(
+              player=game.player.copy(balance=game.player.balance - hand.bet / 2)
+            )
+          }
 
         case "p" =>
           if (!checkSplittable(hand)) {
@@ -342,4 +328,30 @@ object BlackJackGame {
 
   def checkCanDD(hand: BjHand): Boolean = hand.cards.length == 2
 
+  def checkCanSurrender(hand: BjHand): Boolean = hand.cards.length == 2
+
+  def addOneCard(game: Game, hand: BjHand, newBet: Double): (BjHand, Shoe) = {
+//    val (newCard: Option[Seq[BjCard]], newShoe: Shoe) = game.dealer.shoe.deal(1).run(game.dealer.shoe)
+//
+//    val newHand: BjHand = newCard.map(card => card ++ hand.cards) match {
+//      case Some(cards) => BjHand(cards = cards, bet = hand.bet * 2)
+//      case _ =>
+//        println("deck is out of cards!!!  Maybe need to reset the deck sooner...")
+//        sys.exit()
+//    }
+
+//    (newHand, newShoe)
+
+    game.dealer.shoe.deal(1).flatMap(newCard =>
+      State(newShoe => {
+        val newHand: BjHand = newCard.map(card => card ++ hand.cards) match {
+          case Some(cards) => BjHand(cards = cards, bet = newBet)
+          case _ =>
+            println("deck is out of cards!!!  Maybe need to reset the deck sooner...")
+            sys.exit()
+        }
+        (newHand, newShoe)
+      })
+    ).run(game.dealer.shoe)
+  }
 }
