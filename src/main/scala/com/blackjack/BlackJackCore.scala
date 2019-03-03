@@ -48,14 +48,14 @@ trait PlayerAction {
 
 trait Play {
 
-  def checkShoe(game: Game): Unit
-  def dealHands(game: Game): Unit
-  def playerAct(game: Game): Unit
-  def dealerAct(game: Game): Unit
-  def settleUp(game: Game): Unit
+  def checkShoe(game: Game): Game
+  def dealHands(game: Game): Game
+  def playerAct(game: Game): Game
+  def dealerAct(game: Game): Game
+  def settleUp(game: Game): Game
 
 //  @scala.annotation.tailrec
-  final def run(game: Game): Unit = {
+  final def run(game: Game): Game = {
     game.state match {
       case CheckShoe => checkShoe(game)
       case DealHands => dealHands(game)

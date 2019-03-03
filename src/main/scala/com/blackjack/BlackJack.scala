@@ -2,24 +2,6 @@ package com.blackjack
 
 import scala.io.StdIn
 
-object BlackJack {
-  def main(args: Array[String]): Unit = {
-
-    println("Let's play BlackJack!")
-
-    // set up game
-    val game = Game(
-      minBet = 5,
-      maxBet = 1000,
-      player = new Player,
-      dealer = new Dealer,
-      state = CheckShoe
-    )
-
-    (new BlackJackGame).run(game)
-  }
-}
-
 class BlackJackUserAction extends PlayerAction {
   def getAction(): PlayerMove = {
     BlackJackGame.userAction()
@@ -139,15 +121,15 @@ class BlackJackUserAction extends PlayerAction {
 
 class BlackJackGame extends Play {
 
-  def checkShoe(game: Game): Unit = {
+  def checkShoe(game: Game): Game = {
 
     // just check the size of the shoe, create a new one if the size is < n
     if (game.dealer.shoe.size < 15) {
       run(game.copy(dealer = new Dealer))
-    } else run(game.copy(state = DealHands))
+    } else game.copy(state = DealHands)
   }
 
-  def dealHands(game: Game): Unit = {
+  def dealHands(game: Game): Game = {
     println(s"true count: ${"%.2f".format(game.dealer.shoe.trueCount).toDouble}")
 
     // get bet
@@ -171,28 +153,24 @@ class BlackJackGame extends Play {
         SettleUp
       } else PlayerAct
 
-      run(
-        game.copy(
-          dealer = game.dealer.copy(
-            shoe = newShoe,
-            hand = dealerHand),
-          player = game.player.copy(
-            hands = Seq(playerHand)),
-          state = nextState
-        )
+      game.copy(
+        dealer = game.dealer.copy(
+          shoe = newShoe,
+          hand = dealerHand),
+        player = game.player.copy(
+          hands = Seq(playerHand)),
+        state = nextState
       )
     }
   }
 
-  def playerAct(game: Game): Unit = {
-    run(
-      game.player.hands.foldLeft(game.copy(player=game.player.copy(hands=Seq())))((acc, hand) =>
-        (new BlackJackUserAction).action(acc, hand)
-      ).copy(state=DealerAct)
-    )
+  def playerAct(game: Game): Game = {
+    game.player.hands.foldLeft(game.copy(player=game.player.copy(hands=Seq())))((acc, hand) =>
+      (new BlackJackUserAction).action(acc, hand)
+    ).copy(state=DealerAct)
   }
 
-  def dealerAct(game: Game): Unit = {
+  def dealerAct(game: Game): Game = {
     if (game.player.hands.isEmpty) {
       println(s"dealer cards: ${game.dealer.hand.to_string()}")
 
@@ -204,31 +182,25 @@ class BlackJackGame extends Play {
         case "hit" =>
           val (newHand: BjHand, newShoe: Shoe) = BlackJackCore.addOneCard(game, game.dealer.hand, 0)
 
-          run(
-            game.copy(
-              dealer=game.dealer.copy(
-                shoe=newShoe,
-                hand=newHand),
-              state=DealerAct
-            )
+          game.copy(
+            dealer=game.dealer.copy(
+              shoe=newShoe,
+              hand=newHand),
+            state=DealerAct
           )
         case "stay" =>
-          run(
-            game.copy(
-              state=SettleUp
-            )
+          game.copy(
+            state=SettleUp
           )
         case _ =>
-          run(
-            game.copy(
-              state=SettleUp
-            )
+          game.copy(
+            state=SettleUp
           )
       }
     }
   }
 
-  def settleUp(game: Game): Unit = {
+  def settleUp(game: Game): Game = {
     println(s"dealer cards: ${game.dealer.hand.to_string()}")
 
     val dealerHandValue: Int = game.dealer.hand.finalValue()
@@ -253,7 +225,7 @@ class BlackJackGame extends Play {
 
     println(s"balance: $newBalance")
 
-    val newGame = Game(
+    Game(
       minBet = 5,
       maxBet = 1000,
       player = game.player.copy(
@@ -265,8 +237,6 @@ class BlackJackGame extends Play {
       ),
       state = CheckShoe
     )
-
-    (new BlackJackGame).run(newGame)
   }
 }
 
