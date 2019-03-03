@@ -25,7 +25,7 @@ class BlackJackUserAction extends PlayerAction {
     BlackJackGame.userAction()
   }
 
-  def hit(game: Game, hand: BjHand): Game = {
+  def hit: PlayerActionMethod = (game: Game, hand: BjHand) => {
     val (newHand: BjHand, newShoe: Shoe) = BlackJackCore.addOneCard(game, hand, hand.bet)
 
     if (Seq(newHand.handValue(), newHand.lowValue()).min > 21) {
@@ -51,7 +51,7 @@ class BlackJackUserAction extends PlayerAction {
     }
   }
 
-  def doubleDown(game: Game, hand: BjHand): Game = {
+  def doubleDown: PlayerActionMethod = (game: Game, hand: BjHand) => {
     if (!BlackJackCore.checkCanDD(hand)){
       println("too late to double down!")
       action(game, hand)
@@ -78,13 +78,13 @@ class BlackJackUserAction extends PlayerAction {
     }
   }
 
-  def stay(game: Game, hand: BjHand): Game = {
+  def stay: PlayerActionMethod = (game: Game, hand: BjHand) => {
     game.copy(
       player=game.player.copy(hands=hand +: game.player.hands)
     )
   }
 
-  def surrender(game: Game, hand: BjHand): Game = {
+  def surrender: PlayerActionMethod = (game: Game, hand: BjHand) => {
     if (!BlackJackCore.checkCanSurrender(hand)) {
       println("Sorry, too late to surrender!")
       action(game, hand)
@@ -98,7 +98,7 @@ class BlackJackUserAction extends PlayerAction {
     }
   }
 
-  def split(game: Game, hand: BjHand): Game = {
+  def split: PlayerActionMethod = (game: Game, hand: BjHand) => {
     if (!BlackJackCore.checkSplittable(hand)) {
       println("Sorry, can't split that hand!")
       action(game, hand)
@@ -118,7 +118,7 @@ class BlackJackUserAction extends PlayerAction {
     }
   }
 
-  def blackjack(game: Game, hand: BjHand): Game = {
+  def blackjack: PlayerActionMethod = (game: Game, hand: BjHand) => {
     println("you got BlackJack!")
     println(s"balance: ${game.player.balance + 1.5 * hand.bet}")
 

@@ -14,19 +14,22 @@ object PlayerAct extends GameState
 object DealerAct extends GameState
 object SettleUp extends GameState
 
+
 trait PlayerAction {
+
+  type PlayerActionMethod = (Game, BjHand) => Game
   
-  def hit(game: Game, hand: BjHand): Game
-  def doubleDown(game: Game, hand: BjHand): Game
-  def stay(game: Game, hand: BjHand): Game
-  def surrender(game: Game, hand: BjHand): Game
-  def split(game: Game, hand: BjHand): Game
-  def blackjack(game: Game, hand: BjHand): Game
+  def hit: PlayerActionMethod
+  def doubleDown: PlayerActionMethod
+  def stay: PlayerActionMethod
+  def surrender: PlayerActionMethod
+  def split: PlayerActionMethod
+  def blackjack: PlayerActionMethod
   def intro(game: Game, hand: BjHand): Unit
 
   def getAction(): PlayerMove
 
-  final def action(game: Game, hand: BjHand): Game = {
+  final def action: PlayerActionMethod = (game: Game, hand: BjHand) => {
     intro(game, hand)
 
     if (hand.handValue() == 21 && hand.cards.size == 2) {
